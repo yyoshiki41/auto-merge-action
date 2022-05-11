@@ -1,0 +1,54 @@
+name: "Merge a pull request automatically"
+description: "GitHub Action to create pull request and merge automatically"
+author: yyoshiki41
+branding:
+  icon: "git-merge"
+  color: "green"
+
+inputs:
+  base:
+    description: "The branch into which you want your code merged."
+    required: true
+  head:
+    description: "The branch that contains commits for your pull request."
+    required: false
+  title:
+    description: "Title"
+    required: false
+    default: "chore(auto): merge automatically"
+  body:
+    description: "Title"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Manage gh's authentication state
+      shell: bash
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+    - name: Check diff
+      shell: bash
+      id: check_diff
+      run: |
+        git fetch origin ${{ inputs.base }} ${{ inputs.head }}
+        diff=$(git diff --exit-code origin/${{ inputs.base }}...origin/${{ inputs.head }} > /dev/null || echo $?)
+        echo "::set-output name=diff::$diff"
+    - name: Check pull requests
+      shell: bash
+      id: check_pr
+      run: |
+        pr=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
+        echo "::set-output name=pr::$pr"
+    - name: Create a pull request
+      shell: bash
+      if: ${{ steps.check_diff.outputs.diff > 0 && steps.check_pr.outputs.pr == '' }}
+      run: |
+        gh pr create -H ${{ inputs.head }} -B ${{ inputs.base }} -t "${{ inputs.title }}" -b ""
+    # NOTE: merge will fail if the necessary requirements are not completed
+    - name: Merge a pull request if exist
+      shell: bash
+      id: merge_pr
+      if: ${{ steps.check_diff.outputs.diff > 0 && steps.check_pr.outputs.pr != '' }}
+      run: gh pr merge ${{ steps.check_pr.outputs.pr }} --merge
