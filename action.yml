@@ -20,6 +20,10 @@ inputs:
     description: "Title"
     required: false
     default: ""
+  interval:
+    description: "Refresh checks interval in seconds"
+    required: false
+    default: "15"
 
 runs:
   using: "composite"
@@ -50,6 +54,6 @@ runs:
       run: |
         num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
         if [ -n "$num" ]; then
-          gh pr checks ${num} --watch
+          gh pr checks ${num} --watch --interval ${{ inputs.interval }}
           gh pr merge ${num} --merge
         fi
