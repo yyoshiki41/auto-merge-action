@@ -20,20 +20,21 @@ inputs:
     required: false
     default: "chore(auto-merge-action): merge automatically"
   body:
-    description: "Title"
+    description: "Body"
     required: false
     default: ""
-  interval:
-    description: "Refresh checks interval in seconds"
-    required: false
-    default: "15"
+
+outputs:
+  num:
+    description: "Pull Request Number"
+    value: ${{ steps.merge-pr.outputs.num }}
 
 runs:
   using: "composite"
   steps:
     - name: Check pull requests
       shell: bash
-      id: check_pr
+      id: check-pr
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
@@ -41,23 +42,23 @@ runs:
         echo "::set-output name=num::$num"
     - name: Create a pull request
       shell: bash
-      if: ${{ steps.check_pr.outputs.num == '' }}
-      id: check_diff
+      if: ${{ steps.check-pr.outputs.num == '' }}
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         git fetch origin ${{ inputs.base }} ${{ inputs.head }}
-        git diff --exit-code origin/${{ inputs.base }}...origin/${{ inputs.head }} > /dev/null
-        if [ $? -ne 0 ]; then
+        code=(git diff --exit-code --quiet origin/${{ inputs.base }}...origin/${{ inputs.head }} || echo $?)
+        if [ $code -ne 0 ]; then
           gh pr create -H ${{ inputs.head }} -B ${{ inputs.base }} -t "${{ inputs.title }}" -b "${{ inputs.body }}"
         fi
-    # NOTE: merge will fail if the necessary requirements are not completed
     - name: Merge a pull request if exist
       shell: bash
+      id: merge-pr
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
         if [ -n "$num" ]; then
           gh pr merge ${num} --merge
+          echo "::set-output name=number::$num"
         fi
