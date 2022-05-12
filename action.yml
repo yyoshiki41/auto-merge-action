@@ -47,7 +47,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         git fetch origin ${{ inputs.base }} ${{ inputs.head }}
-        code=(git diff --exit-code --quiet origin/${{ inputs.base }}...origin/${{ inputs.head }} || echo $?)
+        code=$(git diff --exit-code --quiet origin/${{ inputs.base }}...origin/${{ inputs.head }} || echo $?)
         if [ $code -ne 0 ]; then
           gh pr create -H ${{ inputs.head }} -B ${{ inputs.base }} -t "${{ inputs.title }}" -b "${{ inputs.body }}"
         fi
