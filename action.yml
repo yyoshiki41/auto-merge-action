@@ -6,9 +6,6 @@ branding:
   color: "green"
 
 inputs:
-  github-token:
-    description: "Your GITHUB_TOKEN"
-    required: true
   base:
     description: "The branch into which you want your code merged."
     required: true
@@ -34,7 +31,7 @@ runs:
     - name: Manage gh's authentication state
       shell: bash
       run: |
-        echo "${{ inputs.github-token }}" | gh auth login --with-token
+        echo "${{ env.GITHUB_TOKEN }}" | gh auth login --with-token
     - name: Check pull requests
       shell: bash
       id: check_pr
