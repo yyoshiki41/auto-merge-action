@@ -54,6 +54,5 @@ runs:
       run: |
         num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
         if [ -n "$num" ]; then
-          gh pr checks ${num} --watch --interval ${{ inputs.interval }}
           gh pr merge ${num} --merge
         fi
