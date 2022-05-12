@@ -15,7 +15,7 @@ inputs:
   title:
     description: "Title"
     required: false
-    default: "chore(auto): merge automatically"
+    default: "chore(auto-merge-action): merge automatically"
   body:
     description: "Title"
     required: false
@@ -28,27 +28,28 @@ runs:
       shell: bash
       run: |
         echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-    - name: Check diff
-      shell: bash
-      id: check_diff
-      run: |
-        git fetch origin ${{ inputs.base }} ${{ inputs.head }}
-        diff=$(git diff --exit-code origin/${{ inputs.base }}...origin/${{ inputs.head }} > /dev/null || echo $?)
-        echo "::set-output name=diff::$diff"
     - name: Check pull requests
       shell: bash
       id: check_pr
       run: |
-        pr=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
-        echo "::set-output name=pr::$pr"
+        num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
+        echo "::set-output name=num::$num"
     - name: Create a pull request
       shell: bash
-      if: ${{ steps.check_diff.outputs.diff > 0 && steps.check_pr.outputs.pr == '' }}
+      if: ${{ steps.check_pr.outputs.num == '' }}
+      id: check_diff
       run: |
-        gh pr create -H ${{ inputs.head }} -B ${{ inputs.base }} -t "${{ inputs.title }}" -b ""
+        git fetch origin ${{ inputs.base }} ${{ inputs.head }}
+        git diff --exit-code origin/${{ inputs.base }}...origin/${{ inputs.head }} > /dev/null
+        if [ $? -ne 0 ]; then
+          gh pr create -H ${{ inputs.head }} -B ${{ inputs.base }} -t "${{ inputs.title }}" -b "${{ inputs.body }}"
+        fi
     # NOTE: merge will fail if the necessary requirements are not completed
     - name: Merge a pull request if exist
       shell: bash
-      id: merge_pr
-      if: ${{ steps.check_diff.outputs.diff > 0 && steps.check_pr.outputs.pr != '' }}
-      run: gh pr merge ${{ steps.check_pr.outputs.pr }} --merge
+      run: |
+        num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
+        if [ -n "$num" ]; then
+          gh pr checks ${num} --watch
+          gh pr merge ${num} --merge
+        fi
