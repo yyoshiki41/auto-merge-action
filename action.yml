@@ -6,6 +6,9 @@ branding:
   color: "green"
 
 inputs:
+  github-token:
+    description: "Your GITHUB_TOKEN"
+    required: true
   base:
     description: "The branch into which you want your code merged."
     required: true
@@ -28,13 +31,11 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Manage gh's authentication state
-      shell: bash
-      run: |
-        echo "${{ env.GITHUB_TOKEN }}" | gh auth login --with-token
     - name: Check pull requests
       shell: bash
       id: check_pr
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
         echo "::set-output name=num::$num"
@@ -42,6 +43,8 @@ runs:
       shell: bash
       if: ${{ steps.check_pr.outputs.num == '' }}
       id: check_diff
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         git fetch origin ${{ inputs.base }} ${{ inputs.head }}
         git diff --exit-code origin/${{ inputs.base }}...origin/${{ inputs.head }} > /dev/null
@@ -51,6 +54,8 @@ runs:
     # NOTE: merge will fail if the necessary requirements are not completed
     - name: Merge a pull request if exist
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
         if [ -n "$num" ]; then
