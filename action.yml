@@ -39,7 +39,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
-        echo "::set-output name=num::$num"
+        echo "num=$num" >> $GITHUB_OUTPUT
     - name: Create a pull request
       shell: bash
       if: ${{ steps.check-pr.outputs.num == '' }}
@@ -60,5 +60,5 @@ runs:
         num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
         if [ -n "$num" ]; then
           gh pr merge ${num} --merge
-          echo "::set-output name=number::$num"
+          echo "num=$num" >> $GITHUB_OUTPUT
         fi
