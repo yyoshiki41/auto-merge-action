@@ -23,6 +23,9 @@ inputs:
     description: "Body"
     required: false
     default: ""
+  merge-method:
+    description: "The merge method to use. `merge`, `rebase` or `squash`."
+    default: merge
 
 outputs:
   num:
@@ -59,6 +62,6 @@ runs:
       run: |
         num=$(gh api repos/:owner/:repo/pulls -q ".[] | select(.head.ref  == \"${{ inputs.head }}\") | select(.base.ref == \"${{ inputs.base }}\") | .number")
         if [ -n "$num" ]; then
-          gh pr merge ${num} --merge
+          gh pr merge ${num} --${{ inputs.merge-method }}
           echo "num=$num" >> $GITHUB_OUTPUT
         fi
